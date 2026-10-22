@@ -24,7 +24,7 @@ public sealed class CardRarityFeedback : MonoBehaviour
     {
         particles.SetCardSize(cardSize);
         particles.raycastTarget = false;
-        glow.rectTransform.sizeDelta = cardSize + new Vector2(110f, 50f);
+        glow.rectTransform.sizeDelta = cardSize + new Vector2(100f, 20f);
         lightningLeft.rectTransform.sizeDelta = lightningRight.rectTransform.sizeDelta = new Vector2(80f, cardSize.y + 24f);
         lightningLeft.rectTransform.anchoredPosition = Vector2.left * (cardSize.x * .5f + 20f);
         lightningRight.rectTransform.anchoredPosition = Vector2.right * (cardSize.x * .5f + 20f);
@@ -54,7 +54,11 @@ public sealed class CardRarityFeedback : MonoBehaviour
         Animate();
     }
     public void SetFocus(float value) => focus = Mathf.Clamp01(value);
-    public void SetPaused(bool value) => paused = value;
+    public void SetPaused(bool value)
+    {
+        paused = value;
+        if (sound != null) sound.SetPaused(value);
+    }
     private void Update() => Advance(Time.unscaledDeltaTime);
 
     // Um relógio para congelar todos os efeitos junto com a pausa.
@@ -71,19 +75,15 @@ public sealed class CardRarityFeedback : MonoBehaviour
         float arrival = Mathf.Clamp01(Elapsed / .045f);
         float burst = Mathf.Exp(-burstAge * 4f);
         float pulse = Mathf.Sin(Elapsed * (2.6f + tier * .3f));
+        float resting = tier == 1 ? .055f : tier == 2 ? .15f : tier == 3 ? .26f : .36f;
+        float reveal = tier == 1 ? .08f : tier == 2 ? .17f : tier == 3 ? .26f : .34f;
         glow.color = new Color(tint.r, tint.g, tint.b,
-            arrival * (.16f + tier * .13f + pulse * .035f + burst * .28f + focus * .12f));
+            arrival * (resting + pulse * .012f * tier + burst * reveal + focus * .025f * tier));
         glow.rectTransform.localScale = Vector3.one * (1f + pulse * .012f + burst * tier * .018f);
         particles.Draw(Elapsed, tier, tint, arrival, burstAge, focus);
-        int frame = Mathf.FloorToInt(burstAge * lightningFramesPerSecond);
-        bool thunder = rarity == UpgradeRarity.Mythic && lightningFrames != null && frame < lightningFrames.Length;
-        lightningLeft.enabled = lightningRight.enabled = thunder;
-        if (thunder)
-        {
-            lightningLeft.sprite = lightningRight.sprite = lightningFrames[frame];
-            Color flash = Color.Lerp(tint, Color.white, .55f); flash.a = arrival * .75f;
-            lightningLeft.color = lightningRight.color = flash;
-        }
+        // Native short mesh arcs now hug the border; do not stretch the old
+        // vertical thunder sprites around an unrelated card silhouette.
+        lightningLeft.enabled = lightningRight.enabled = false;
     }
     public void Hide()
     {

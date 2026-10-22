@@ -18,12 +18,24 @@ public sealed class CardRewardView : MonoBehaviour
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip revealSound;
     [SerializeField] private AudioClip chooseSound;
+    [SerializeField] private AudioClip rerollSound;
+    [SerializeField] private AudioClip legendaryTreasure;
+    [SerializeField] private AudioClip mythicTreasure;
+    [SerializeField, Range(0f, 1f)] private float legendaryTreasureVolume = .24f;
+    [SerializeField, Range(0f, 1f)] private float mythicTreasureVolume = .28f;
     [SerializeField, Min(.01f)] private float dealDuration = .38f;
     [SerializeField, Min(.01f)] private float flipDuration = .32f;
     [SerializeField, Min(0f)] private float stagger = .1f;
     private bool paused;
     private RectTransform layoutRoot;
     private float layoutWidth = -1f;
+    private AudioSource legendaryBed, mythicBed;
+    private bool treasureAllowed;
+    public UpgradeRarity TreasureRarity { get; private set; }
+    public int TreasureVoices => (legendaryBed != null && legendaryBed.isPlaying ? 1 : 0)
+        + (mythicBed != null && mythicBed.isPlaying ? 1 : 0);
+    public AudioSource LegendaryTreasureSource => legendaryBed;
+    public AudioSource MythicTreasureSource => mythicBed;
     public event Action<int> ChoiceRequested;
     public event Action RerollRequested;
     public CardOptionView[] Options => options;
@@ -34,7 +46,9 @@ public sealed class CardRewardView : MonoBehaviour
     private void Awake()
     {
         ApplyCardSpacing();
-        audioSource.ignoreListenerPause = true;
+        audioSource.ignoreListenerPause = false;
+        legendaryBed = CreateTreasureSource("LegendaryTreasure");
+        mythicBed = CreateTreasureSource("MythicTreasure");
         for (int i = 0; i < options.Length; i++)
         {
             int index = i;
@@ -65,11 +79,65 @@ public sealed class CardRewardView : MonoBehaviour
             slot.localScale = Vector3.one * fit;
         }
     }
-    private void LateUpdate() => ApplyCardSpacing();
+    private void LateUpdate()
+    {
+        ApplyCardSpacing();
+        UpdateTreasure();
+    }
+
+    private AudioSource CreateTreasureSource(string name)
+    {
+        var child = new GameObject(name);
+        child.transform.SetParent(transform, false);
+        var result = child.AddComponent<AudioSource>();
+        result.outputAudioMixerGroup = audioSource.outputAudioMixerGroup;
+        result.playOnAwake = false;
+        result.loop = true;
+        result.spatialBlend = 0f;
+        result.ignoreListenerPause = false;
+        result.priority = 180;
+        result.volume = 0f;
+        return result;
+    }
+
+    private void UpdateTreasure()
+    {
+        if (paused || legendaryBed == null || mythicBed == null) return;
+        UpgradeRarity highest = UpgradeRarity.Common;
+        if (treasureAllowed && IsVisible)
+            foreach (var option in options)
+                if (option.FrontShowing && option.Rarity > highest) highest = option.Rarity;
+        TreasureRarity = highest >= UpgradeRarity.Legendary ? highest : UpgradeRarity.Common;
+        // One shared bed for the offer, not one loop for every high-rarity card.
+        FadeTreasure(legendaryBed, legendaryTreasure, highest == UpgradeRarity.Legendary ? legendaryTreasureVolume : 0f);
+        FadeTreasure(mythicBed, mythicTreasure, highest == UpgradeRarity.Mythic ? mythicTreasureVolume : 0f);
+    }
+
+    private void FadeTreasure(AudioSource bed, AudioClip clip, float target)
+    {
+        if (target > 0f && clip != null && !bed.isPlaying)
+        {
+            bed.clip = clip;
+            bed.Play();
+        }
+        bed.volume = Mathf.MoveTowards(bed.volume, target, Time.unscaledDeltaTime * 1.6f);
+        if (target == 0f && bed.volume <= .001f) { bed.Stop(); bed.clip = null; }
+    }
+
+    private void StopTreasure(bool immediately)
+    {
+        treasureAllowed = false;
+        TreasureRarity = UpgradeRarity.Common;
+        if (!immediately) return;
+        foreach (var bed in new[] { legendaryBed, mythicBed })
+            if (bed != null) { bed.Stop(); bed.clip = null; bed.volume = 0f; }
+    }
 
     public void SetPaused(bool value)
     {
         paused = value;
+        foreach (var sound in new[] { audioSource, legendaryBed, mythicBed })
+            if (sound != null) { if (value) sound.Pause(); else sound.UnPause(); }
         foreach (CardOptionView option in options) option.SetPaused(value);
     }
     public void SetInteraction(bool ready, int remaining)
@@ -112,6 +180,8 @@ public sealed class CardRewardView : MonoBehaviour
 
     public IEnumerator Reroll(UpgradeCard[] offers, UpgradeCardCatalog catalog, PlayerRunUpgrades upgrades)
     {
+        StopTreasure(true);
+        Play(rerollSound, 1f);
         for (float time = 0f; time < .18f; time += Delta)
         {
             float t = Mathf.Clamp01(time / .18f);
@@ -128,6 +198,11 @@ public sealed class CardRewardView : MonoBehaviour
 
     private void Bind(UpgradeCard[] offers, UpgradeCardCatalog catalog, PlayerRunUpgrades upgrades)
     {
+        StopTreasure(true);
+        treasureAllowed = true;
+        int highRarityCount = 0;
+        foreach (var offer in offers)
+            if (offer.rarity >= UpgradeRarity.Legendary) highRarityCount++;
         for (int i = 0; i < options.Length; i++)
         {
             UpgradeCard card = offers[i];
@@ -136,6 +211,8 @@ public sealed class CardRewardView : MonoBehaviour
             string format = card.kind == UpgradeKind.MaximumHealth ? "0" : "0.##";
             string comparison = $"{name}: {upgrades.Value(card.kind).ToString(format)} → {upgrades.Value(card.kind, card.percent).ToString(format)}\nTotal: +{upgrades.Bonus(card.kind) + card.percent}%";
             options[i].Bind(card, catalog.Artwork(card), comparison);
+            var sound = options[i].GetComponentInChildren<CardRarityAudio>(true);
+            if (sound != null) sound.ConfigureOverlap(highRarityCount, card.rarity);
             options[i].SetPose(0f, 1f, 0f, 1f);
         }
         RefreshTotals(upgrades);
@@ -187,7 +264,8 @@ public sealed class CardRewardView : MonoBehaviour
 
     public IEnumerator Choose(int index, PlayerRunUpgrades upgrades)
     {
-        Play(chooseSound, 1f);
+        StopTreasure(false);
+        Play(chooseSound, 1f + (int)options[index].Rarity * .025f);
         options[index].CelebrateChoice();
         RefreshTotals(upgrades);
         float duration = .32f + (int)options[index].Rarity * .06f;
@@ -206,6 +284,13 @@ public sealed class CardRewardView : MonoBehaviour
         totals.text = $"DANO +{upgrades.Bonus(UpgradeKind.AttackDamage)}%     CADÊNCIA +{upgrades.Bonus(UpgradeKind.AttackSpeed)}%     HP +{upgrades.Bonus(UpgradeKind.MaximumHealth)}%     MOVIMENTO +{upgrades.Bonus(UpgradeKind.MoveSpeed)}%     ESPECIAL +{upgrades.Bonus(UpgradeKind.SpecialDamage)}%";
     }
     private void Play(AudioClip clip, float pitch) { if (clip == null) return; audioSource.pitch = pitch; audioSource.PlayOneShot(clip, .55f); }
-    public void HideImmediately() { content.SetActive(false); backdrop.Release(); }
+    public void HideImmediately()
+    {
+        StopTreasure(true);
+        audioSource.Stop();
+        content.SetActive(false);
+        backdrop.Release();
+    }
+    private void OnDisable() { StopTreasure(true); if (audioSource != null) audioSource.Stop(); }
     private static float EaseOut(float progress) { float t = 1f - Mathf.Clamp01(progress); return 1f - t * t * t; }
 }
