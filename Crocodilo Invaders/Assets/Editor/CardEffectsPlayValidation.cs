@@ -36,6 +36,7 @@ public static class CardEffectsPlayValidation
     public static void Run()
     {
         if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        CardAudioPackageTools.Validate();
         EditorSceneManager.OpenScene("Assets/Scenes/Tests/PlayerMovementTest.unity");
         Find<WaveController>().enabled = false;
         SessionState.SetBool(Key, true);
@@ -78,6 +79,18 @@ public static class CardEffectsPlayValidation
             if (rank >= 3) yield return Capture(1200, 720, "impact_" + rank);
             yield return Until(() => rewards.State == CardRewardController.RewardState.Ready, "Ready");
             Check(view.Options.All(o => o.Rarity == (UpgradeRarity)rank), "Três cartas na raridade " + rank);
+            yield return Wait(.3f);
+            Check(view.TreasureRarity == (rank >= 3 ? (UpgradeRarity)rank : UpgradeRarity.Common),
+                "Tesouro somente em lendárias/míticas: " + rank);
+            Check(view.TreasureVoices == (rank >= 3 ? 1 : 0), "Um único loop compartilhado por oferta: " + rank);
+            AudioSource treasure = rank == 3 ? view.LegendaryTreasureSource : rank == 4 ? view.MythicTreasureSource : null;
+            if (treasure != null)
+            {
+                Check(treasure.loop && treasure.clip != null && treasure.volume > .1f, "Loop contínuo com volume configurado");
+                int initialSample = treasure.timeSamples;
+                yield return Wait(.15f);
+                Check(treasure.timeSamples != initialSample, "Áudio do tesouro realmente avança");
+            }
             if (rank > 0)
                 foreach (var option in view.Options)
                 {
@@ -88,9 +101,11 @@ public static class CardEffectsPlayValidation
                 }
             float[] frozen = feedback.Select(f => f.Elapsed).ToArray();
             pause.PauseGame();
+            int pausedSample = treasure != null ? treasure.timeSamples : 0;
             // Guardar depois da chamada evita diferença de um frame do editor.
             frozen = feedback.Select(f => f.Elapsed).ToArray();
             yield return Wait(.2f);
+            if (treasure != null) Check(Mathf.Abs(treasure.timeSamples - pausedSample) < 1024, "Pausa congela o áudio de tesouro");
             Check(feedback.Select((f, i) => Mathf.Approximately(f.Elapsed, frozen[i])).All(v => v), "Pausa congela efeitos: " + rank);
             Check(!rewards.TryReroll(), "Pausa bloqueia reroll: " + rank);
             pause.ResumeGame();
@@ -127,6 +142,7 @@ public static class CardEffectsPlayValidation
         Check(rewards.TryChoose(1), "Escolha real da mítica");
         yield return Until(() => rewards.State == CardRewardController.RewardState.Closed, "escolha finalizada");
         Check(!view.IsVisible && Mathf.Approximately(Time.timeScale, 1f), "Fecha cartas e libera relógio");
+        Check(view.TreasureVoices == 0, "Escolha/saída encerra todos os loops de tesouro");
         Check(view.Options.All(o => !o.GetComponentInChildren<CardRarityFeedback>(true).IsRevealed), "Saída limpa todos os efeitos");
         Check(waves.RequestDevelopmentCardReward(), "Nova oferta após escolha");
         yield return Until(() => rewards.State == CardRewardController.RewardState.Ready, "nova oferta");
@@ -153,13 +169,40 @@ public static class CardEffectsPlayValidation
             yield return Capture(1200, 720, "all_cards_" + batch);
             view.SetPaused(false);
         }
+        var overlapOffers = new[] { catalog.Get(UpgradeKind.AttackDamage, UpgradeRarity.Mythic),
+            catalog.Get(UpgradeKind.AttackSpeed, UpgradeRarity.Mythic), catalog.Get(UpgradeKind.MaximumHealth, UpgradeRarity.Common) };
+        yield return view.Reroll(overlapOffers, catalog, Find<PlayerRunUpgrades>());
+        Check(view.Options.Take(2).All(o => Mathf.Approximately(o.GetComponentInChildren<CardRarityAudio>(true).OfferGain, .5f)),
+            "Duas miticas dividem o ganho de revelacao");
+        Check(Mathf.Approximately(view.Options[2].GetComponentInChildren<CardRarityAudio>(true).OfferGain, 1f), "Comum preserva ganho na oferta mista");
+        yield return Wait(.3f);
+        Check(view.TreasureVoices == 1, "Duas miticas compartilham uma unica cintilacao");
         Check(visited.Count == 25, "Todas as 25 cartas exibidas e capturadas no fluxo real");
+        DevelopmentCardSession.Mode = DevelopmentCardSession.OfferMode.FixedRarity;
+        DevelopmentCardSession.Rarity = UpgradeRarity.Mythic;
+        Check(rewards.TryReroll(), "Oferta mítica antes do teste de limpeza");
+        yield return Until(() => rewards.State == CardRewardController.RewardState.Ready, "oferta mítica de limpeza");
+        yield return Wait(.3f);
+        Check(view.TreasureVoices == 1, "Três míticas compartilham um só tesouro");
+        Check(view.Options.All(o => Mathf.Approximately(o.GetComponentInChildren<CardRarityAudio>(true).OfferGain, 1f / 3f)),
+            "Tres miticas dividem o ganho por tres");
+        DevelopmentCardSession.Rarity = UpgradeRarity.Common;
+        Check(rewards.TryReroll(), "Troca de míticas para comuns");
+        yield return Until(() => rewards.State == CardRewardController.RewardState.Ready, "oferta comum de limpeza");
+        Check(view.TreasureVoices == 0, "Reroll para comuns remove tesouro anterior");
+        DevelopmentCardSession.Rarity = UpgradeRarity.Mythic;
+        Check(rewards.TryReroll(), "Abre tesouro antes de sair para o menu");
+        yield return Until(() => rewards.State == CardRewardController.RewardState.Ready, "tesouro antes do menu");
+        yield return Wait(.3f);
+        Check(view.TreasureVoices == 1, "Tesouro ativo antes da troca de cena");
         view.SetPaused(true);
         Check(view.Options.All(o => o.FrontShowing), "Frentes preservadas após reroll");
         EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainMenu.unity", new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
         yield return Until(() => !DevelopmentCardSession.IsActive, "menu inicial");
         yield return Frames(3);
         Check(!DevelopmentCardSession.IsActive && Mathf.Approximately(Time.timeScale, 1f), "Menu encerra sessão e restaura tempo");
+        Check(!Object.FindObjectsByType<AudioSource>(FindObjectsSortMode.None).Any(s => s.name == "LegendaryTreasure" || s.name == "MythicTreasure"),
+            "Menu remove as fontes de tesouro da cena anterior");
     }
     private static void Tick()
     {
