@@ -22,6 +22,8 @@ public sealed class CardRewardView : MonoBehaviour
     [SerializeField, Min(.01f)] private float flipDuration = .32f;
     [SerializeField, Min(0f)] private float stagger = .1f;
     private bool paused;
+    private RectTransform layoutRoot;
+    private float layoutWidth = -1f;
     public event Action<int> ChoiceRequested;
     public event Action RerollRequested;
     public CardOptionView[] Options => options;
@@ -31,6 +33,7 @@ public sealed class CardRewardView : MonoBehaviour
 
     private void Awake()
     {
+        ApplyCardSpacing();
         audioSource.ignoreListenerPause = true;
         for (int i = 0; i < options.Length; i++)
         {
@@ -41,6 +44,29 @@ public sealed class CardRewardView : MonoBehaviour
         content.SetActive(false);
     }
 
+    public void ApplyCardSpacing()
+    {
+        if (layoutRoot == null)
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas != null) layoutRoot = (RectTransform)canvas.rootCanvas.transform;
+        }
+        float width = layoutRoot != null && layoutRoot.rect.width > 0f ? layoutRoot.rect.width : 1200f;
+        if (Mathf.Abs(width - layoutWidth) < .1f) return;
+        layoutWidth = width;
+        float fit = Mathf.Min(1f, width / 1140f);
+        // Referência 1200x720: vão de 100 px entre faces de 250 px (antes 50).
+        for (int i = 0; i < options.Length; i++)
+        {
+            RectTransform slot = (RectTransform)options[i].transform;
+            Vector2 position = slot.anchoredPosition;
+            position.x = (i - (options.Length - 1) * .5f) * 350f * fit;
+            slot.anchoredPosition = position;
+            slot.localScale = Vector3.one * fit;
+        }
+    }
+    private void LateUpdate() => ApplyCardSpacing();
+
     public void SetPaused(bool value)
     {
         paused = value;
@@ -48,17 +74,20 @@ public sealed class CardRewardView : MonoBehaviour
     }
     public void SetInteraction(bool ready, int remaining)
     {
+        bool unlimited = DevelopmentCardSession.IsActive;
+        bool available = unlimited || remaining > 0;
         window.interactable = ready;
         foreach (CardOptionView option in options) option.SetInteractive(ready);
-        reroll.interactable = ready && remaining > 0;
+        reroll.interactable = ready && available;
         foreach (CardOptionView option in options)
         {
             Navigation navigation = option.Button.navigation;
             navigation.selectOnDown = reroll.interactable ? reroll : null;
             option.Button.navigation = navigation;
         }
-        rerollLabel.text = remaining > 0 ? "REROLL GRATUITO  ·  1/1  [R]" : "REROLL USADO  ·  0/1";
-        rerollLabel.color = remaining > 0 ? new Color(1f, .85f, .55f) : new Color(.6f, .6f, .65f);
+        rerollLabel.text = unlimited ? "REROLL INFINITO  ·  DEV  [R]"
+            : remaining > 0 ? "REROLL GRATUITO  ·  1/1  [R]" : "REROLL USADO  ·  0/1";
+        rerollLabel.color = available ? new Color(1f, .85f, .55f) : new Color(.6f, .6f, .65f);
         if (ready && EventSystem.current != null) EventSystem.current.SetSelectedGameObject(options[1].Button.gameObject);
     }
 
@@ -117,7 +146,19 @@ public sealed class CardRewardView : MonoBehaviour
         bool[] sounded = new bool[options.Length];
         float entry = entering ? dealDuration : .08f;
         float flipStart = entry + .08f;
-        float finish = flipStart + flipDuration + stagger * (options.Length - 1);
+        var starts = new float[options.Length];
+        var durations = new float[options.Length];
+        float finish = 0f;
+        for (int i = 0; i < options.Length; i++)
+        {
+            // A mais rara fecha a revelação; a posição das escolhas permanece igual.
+            int order = 0;
+            for (int j = 0; j < offers.Length; j++)
+                if (offers[j].rarity < offers[i].rarity || (offers[j].rarity == offers[i].rarity && j < i)) order++;
+            starts[i] = flipStart + order * Mathf.Max(stagger, .2f);
+            durations[i] = flipDuration + (int)offers[i].rarity * .055f;
+            finish = Mathf.Max(finish, starts[i] + durations[i]);
+        }
         for (float time = 0f; time < finish; time += Delta)
         {
             for (int i = 0; i < options.Length; i++)
@@ -126,7 +167,7 @@ public sealed class CardRewardView : MonoBehaviour
                 float arriving = EaseOut(local / entry);
                 options[i].SetPose(entering ? Mathf.Lerp(-620f, 0f, arriving) : 0f,
                     Mathf.Lerp(.86f, 1f, arriving), entering ? Mathf.Lerp((i - 1) * 9f, 0f, arriving) : 0f, arriving);
-                float turning = Mathf.Clamp01((local - flipStart) / flipDuration);
+                float turning = Mathf.Clamp01((time - starts[i]) / durations[i]);
                 options[i].SetFlip(Mathf.Abs(Mathf.Cos(turning * Mathf.PI)));
                 if (turning >= .5f)
                 {
@@ -134,7 +175,7 @@ public sealed class CardRewardView : MonoBehaviour
                     if (!sounded[i])
                     {
                         sounded[i] = true;
-                        if (offers[i].rarity < UpgradeRarity.Epic || !options[i].HasRarityFeedback)
+                        if (offers[i].rarity < UpgradeRarity.Rare || !options[i].HasRarityFeedback)
                             Play(revealSound, .94f + i * .06f + (int)offers[i].rarity * .035f);
                     }
                 }
@@ -147,10 +188,12 @@ public sealed class CardRewardView : MonoBehaviour
     public IEnumerator Choose(int index, PlayerRunUpgrades upgrades)
     {
         Play(chooseSound, 1f);
+        options[index].CelebrateChoice();
         RefreshTotals(upgrades);
-        for (float time = 0f; time < .32f; time += Delta)
+        float duration = .32f + (int)options[index].Rarity * .06f;
+        for (float time = 0f; time < duration; time += Delta)
         {
-            float t = EaseOut(time / .32f);
+            float t = EaseOut(time / duration);
             for (int i = 0; i < options.Length; i++) options[i].SetPose(i == index ? t * 28f : -t * 12f,
                 i == index ? 1f + t * .06f : 1f - t * .03f, 0f, i == index ? 1f : 1f - t);
             yield return null;

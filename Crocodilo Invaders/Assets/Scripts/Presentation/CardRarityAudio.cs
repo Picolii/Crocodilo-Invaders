@@ -4,6 +4,7 @@ using UnityEngine;
 public sealed class CardRarityAudio : MonoBehaviour
 {
     [SerializeField] private AudioSource source;
+    [SerializeField] private AudioClip rare;
     [SerializeField] private AudioClip epic;
     [SerializeField] private AudioClip legendary;
     [SerializeField] private AudioClip mythic;
@@ -20,13 +21,16 @@ public sealed class CardRarityAudio : MonoBehaviour
 
     public void Reveal(UpgradeRarity rarity)
     {
-        AudioClip clip = rarity == UpgradeRarity.Epic ? epic
+        AudioClip clip = rarity == UpgradeRarity.Rare ? rare : rarity == UpgradeRarity.Epic ? epic
             : rarity == UpgradeRarity.Legendary ? legendary
             : rarity == UpgradeRarity.Mythic ? mythic : null;
         if (clip == null) return;
         RevealCount++;
         LastRevealClip = clip;
-        source.PlayOneShot(clip);
+        source.pitch = 1f; // Cada raridade tem composição própria, com notas e camadas distintas.
+        float gain = rarity == UpgradeRarity.Rare ? .60f : rarity == UpgradeRarity.Epic ? .72f
+            : rarity == UpgradeRarity.Legendary ? .84f : .96f;
+        source.PlayOneShot(clip, gain);
     }
 
     public void Stop() { if (source != null) source.Stop(); }

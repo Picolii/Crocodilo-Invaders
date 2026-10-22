@@ -3073,6 +3073,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::CardRarityAudio
   source: {fileID: 4732282921274296327}
+  rare: {fileID: 8300000, guid: 06b1f853a1b5d014c80864674b43f1a8, type: 3}
   epic: {fileID: 8300000, guid: 38407ccf5cb841ba9f67667d9d5f3f0c, type: 3}
   legendary: {fileID: 8300000, guid: 9f0d40e2d6394702bffbea9a7607a5c4, type: 3}
   mythic: {fileID: 8300000, guid: c1787ec152974f0c85da45bb455010f0, type: 3}
@@ -3559,6 +3560,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::CardRarityAudio
   source: {fileID: 8904617745834548067}
+  rare: {fileID: 8300000, guid: 06b1f853a1b5d014c80864674b43f1a8, type: 3}
   epic: {fileID: 8300000, guid: 38407ccf5cb841ba9f67667d9d5f3f0c, type: 3}
   legendary: {fileID: 8300000, guid: 9f0d40e2d6394702bffbea9a7607a5c4, type: 3}
   mythic: {fileID: 8300000, guid: c1787ec152974f0c85da45bb455010f0, type: 3}
@@ -4288,6 +4290,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::CardRarityAudio
   source: {fileID: 7585225143890319234}
+  rare: {fileID: 8300000, guid: 06b1f853a1b5d014c80864674b43f1a8, type: 3}
   epic: {fileID: 8300000, guid: 38407ccf5cb841ba9f67667d9d5f3f0c, type: 3}
   legendary: {fileID: 8300000, guid: 9f0d40e2d6394702bffbea9a7607a5c4, type: 3}
   mythic: {fileID: 8300000, guid: c1787ec152974f0c85da45bb455010f0, type: 3}
