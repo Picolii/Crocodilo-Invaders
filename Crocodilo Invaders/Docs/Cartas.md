@@ -27,10 +27,86 @@ ele troca as três ofertas e renova somente na próxima onda concluída. O botã
 fica indisponível depois do uso e durante as animações, evitando gastos ou escolhas
 duplicadas.
 
-## Valores das artes fornecidas
+## Coleção atual v15 — 21/10/2026
 
-As 25 cartas e o verso são cópias dos PNGs originais do usuário. Os valores do
-catálogo correspondem aos números impressos nas cartas:
+As 25 frentes e o verso agora têm fundo externo transparente nos recortes e
+cantos da moldura. Pixels internos e correções v14 preservados.
+Verificador ativo: `Tools/Art/build_card_alpha_v15.py --check`.
+Detalhes: [TransparenciaCartas_v15.md](TransparenciaCartas_v15.md).
+
+## Histórico: v14 — 21/10/2026
+
+As 25 aberturas de ilustração e bordas internas foram recompostas para eliminar
+faixas da imagem antiga atrás da moldura. Textos e sons v13, verso e efeitos
+mantidos. Auditoria completa: [RevisaoMolduras_v14.md](RevisaoMolduras_v14.md).
+Verificador ativo: `Tools/Art/build_card_frames_v14.py --check`.
+
+## Histórico: v13 — 21/10/2026
+
+As 25 frentes usam a arte v12 com tipografia v13 corrigida: glifos inteiros e
+mais margem inferior. Novo verso simétrico com selo militar e quatro sons próprios
+de revelação, da rara à mítica. Efeitos externos progressivos e reroll infinito
+no DEV mantidos. Detalhes: [AjustesCartas_v13.md](AjustesCartas_v13.md).
+Conferência atual: `Tools/Art/build_card_fine_tuning_v13.py --check`.
+
+## Histórico: coleção v12 aplicada — 21/10/2026
+
+Teste dentro da cena real: menu inicial → **DEV** (canto superior direito) ou
+**F8** → **Iniciar teste de cartas**. Modos normal/raridade fixa/ciclo25, escolha
+e reroll reais, geração repetida, bônus acumulados/reset e retorno ao menu.
+Detalhes e limites de validação em `Docs/ModoDesenvolvedor.md`.
+
+As 25 frentes em `Assets/Resources/Cards/` agora usam a coleção aprovada v12.
+Ataque, Rajada, Blindagem, Propulsão e Especial possuem cinco raridades e expressão
+progressiva: comum confiante, raro irritado, épico furioso em rosnado, lendário
+quase insano num berro e mítico em gargalhada aberta. Míticas carmesim, bocas
+corrigidas e tipografia v08 incluídas.
+
+Nesta etapa as cartas são imagens estáticas, sem os foils/holográficos dinâmicos
+da prévia. A configuração desses efeitos na Unity fica para uma tarefa posterior,
+conforme solicitado. Código, materiais e feedbacks de raridade existentes intactos.
+
+Frentes de 360×536, sprite `Card` cobrindo a imagem inteira, filtro Point,
+sem mipmaps/compressão e limite de importação 1024 para não reduzir a altura 536.
+PPU 200 mantém a dimensão nominal das cartas anteriores 180×268 com PPU 100.
+GUIDs, spriteIDs e fileIDs preservados. Catálogo, caminhos Resources, valores,
+sorteios, verso e animações permanecem iguais ao estado anterior à integração.
+
+Aplicação reproduzível: `node Tools/Art/apply_card_collection_v12.cjs`.
+Conferência: `node Tools/Art/apply_card_collection_v12.cjs --check`.
+Backup das 25 imagens/metadados anteriores e manifesto da integração em
+`SourceArt/CardCollection_v12_Integration`. Fontes de expressões e prévia em
+`SourceArt/CardCollection_v12_Expressions` e `Docs/ArtPreviews/CardCollection_v12`.
+
+Conferência de 25 imagens/hashes, recortes, referências e valores passou.
+Build Windows na Unity6000.6.4f1 e teste de inicialização headless concluídos
+em21/10/2026. Pacote `Builds/Pacotes/CrocodiloInvaders-DEV-Windows.zip`.
+Conferência visual interativa pelo modo DEV ainda pendente.
+
+## Histórico: cartas Croc v03 — 20/10/2026
+
+O usuário rejeitou a v01 (ícones genéricos e moldura uniforme) e a v02 (molduras
+planas e composição com sprites pequenos). A v03 usa novas cenas de combate em
+close-up, com a identidade do retrato do Croc como referência, e molduras de metal
+sombreadas, com espessura, rebites, desgaste e luzes embutidas. As famílias são
+Ataque, Rajada, Blindagem, Propulsão e Especial. Frases pequenas foram removidas.
+O verso mostra Croc com asas militares. Valores, sorteio, efeitos e animações iguais.
+
+Molduras: aço/oliva comum; chassi azul com cantoneiras prateadas e luz ciano raro;
+armadura violeta com conduítes épica; bronze/ouro com ombros alados e estrela
+lendário; carcaça carmesim com presas marfim mítico. A mesma ilustração aparece
+na prancha das cinco raridades para comparar material, estrutura, cor e acabamento.
+
+Cartas de 180×268, composição por atlas com filtro Point e letras bitmap;
+sem mipmaps. GUIDs e fileIDs preservados; importação cobre a tela inteira.
+Manifest e fontes documentados em `SourceArt/CardsCroc_v03`, exportador em
+`Tools/Art/build_croc_cards_v03.cjs`, prévias em `Docs/ArtPreviews/CardsCroc_v03`.
+V01/v02 e originais anteriores preservados nas respectivas pastas de SourceArt.
+Conferência visual e validação de catálogo concluídas; sem Play Mode nesta revisão.
+
+## Valores das cartas
+
+Os valores do catálogo correspondem aos números impressos nas 25 cartas:
 
 | Buff | Comum | Raro | Épico | Lendário | Mítico |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -143,9 +219,9 @@ o caráter musical das três revelações; os timbres e as cores acima são esco
   `Reward Transition Duration`, padrão 0,35 s, começa após concluir a escolha.
 
 `Assets/Prefabs/UI/CardRewards.prefab` está nas cenas `PlayerMovementTest` e
-`StageOneWaves`. Os versos e as frentes usam a mesma área visual; o recorte considera
-os pixels visíveis, sem modificar os arquivos originais. As texturas são importadas
-com limite 512, filtro Point, sem mipmaps ou compressão. O catálogo contém caminhos,
+`StageOneWaves`. Os versos e as frentes usam a mesma área visual de 180×268;
+o recorte cobre a tela nativa completa. As texturas são importadas com limite 512,
+filtro Point, sem mipmaps ou compressão. O catálogo contém caminhos,
 e só carrega as frentes oferecidas, guardando-as para reutilização durante a sessão.
 Não há carregamento inicial das 25 texturas nem novas dependências de animação.
 
