@@ -27,82 +27,39 @@ ele troca as três ofertas e renova somente na próxima onda concluída. O botã
 fica indisponível depois do uso e durante as animações, evitando gastos ou escolhas
 duplicadas.
 
-## Coleção atual v15 — 21/10/2026
+## Coleção atual v21 — sistemas da nave — 22/10/2026
 
-As 25 frentes e o verso agora têm fundo externo transparente nos recortes e
-cantos da moldura. Pixels internos e correções v14 preservados.
-Verificador ativo: `Tools/Art/build_card_alpha_v15.py --check`.
-Detalhes: [TransparenciaCartas_v15.md](TransparenciaCartas_v15.md).
+As 25 frentes agora mostram os sistemas instalados na nave, sem o croc:
+Ataque, Rajada, Blindagem, Propulsão e Especial. Comum simples em oliva/aço,
+rara azul, épica violeta, lendária dourada full art e mítica carmesim full art
+com relevo ilustrado e sobreposição localizada na moldura. No Ataque mítico
+a borda esquerda permanece inteira e somente a bala atravessa a borda direita.
 
-## Histórico: v14 — 21/10/2026
+Sprites individuais em `Assets/Resources/Cards/{família}/{raridade}.png`,
+360×536 RGBA, sobre grade lógica 180×268. As cinco pranchas aprovadas ficam em
+`SourceArt/CardCollection_v21_Integration/Sheets`. O exportador separa as
+silhuetas, remove o fundo externo conectado e padroniza as proporções sem
+cortar a arte. Molduras vizinhas que se tocam na prancha são separadas pelo
+vão de menor custo. Prévia da transparência em quadriculado:
+`Docs/ArtPreviews/CardCollection_v21`.
 
-As 25 aberturas de ilustração e bordas internas foram recompostas para eliminar
-faixas da imagem antiga atrás da moldura. Textos e sons v13, verso e efeitos
-mantidos. Auditoria completa: [RevisaoMolduras_v14.md](RevisaoMolduras_v14.md).
-Verificador ativo: `Tools/Art/build_card_frames_v14.py --check`.
+Aplicação: `node Tools/Art/apply_ship_cards_v21.cjs --apply`.
+Conferência sem mutação: `node Tools/Art/apply_ship_cards_v21.cjs --check`.
+GUIDs, spriteIDs/fileIDs, recortes 360×536, PPU200, filtro Point, valores,
+catálogo, verso, sons e efeitos externos preservados. Foil/holografia e
+relevo desta arte são estáticos; não há nova implementação de material dinâmico.
 
-## Histórico: v13 — 21/10/2026
+Backup fora do projeto Unity, ao lado de `Gaming portugol`:
+`Backup/Cartas/2026-10-22_Anteriores_v21`, na raiz Git. Contém uma cópia das
+25 frentes/metadados anteriores em `01_EmUsoNoJogo` e fontes, prévias, prompts,
+geradores e guias históricos em `02_ModelosEHistorico`. Cada arquivo foi
+conferido por SHA-256. Os históricos antigos foram retirados da pasta do jogo;
+o manifesto do backup registra os caminhos de origem e destino.
 
-As 25 frentes usam a arte v12 com tipografia v13 corrigida: glifos inteiros e
-mais margem inferior. Novo verso simétrico com selo militar e quatro sons próprios
-de revelação, da rara à mítica. Efeitos externos progressivos e reroll infinito
-no DEV mantidos. Detalhes: [AjustesCartas_v13.md](AjustesCartas_v13.md).
-Conferência atual: `Tools/Art/build_card_fine_tuning_v13.py --check`.
-
-## Histórico: coleção v12 aplicada — 21/10/2026
-
-Teste dentro da cena real: menu inicial → **DEV** (canto superior direito) ou
-**F8** → **Iniciar teste de cartas**. Modos normal/raridade fixa/ciclo25, escolha
-e reroll reais, geração repetida, bônus acumulados/reset e retorno ao menu.
-Detalhes e limites de validação em `Docs/ModoDesenvolvedor.md`.
-
-As 25 frentes em `Assets/Resources/Cards/` agora usam a coleção aprovada v12.
-Ataque, Rajada, Blindagem, Propulsão e Especial possuem cinco raridades e expressão
-progressiva: comum confiante, raro irritado, épico furioso em rosnado, lendário
-quase insano num berro e mítico em gargalhada aberta. Míticas carmesim, bocas
-corrigidas e tipografia v08 incluídas.
-
-Nesta etapa as cartas são imagens estáticas, sem os foils/holográficos dinâmicos
-da prévia. A configuração desses efeitos na Unity fica para uma tarefa posterior,
-conforme solicitado. Código, materiais e feedbacks de raridade existentes intactos.
-
-Frentes de 360×536, sprite `Card` cobrindo a imagem inteira, filtro Point,
-sem mipmaps/compressão e limite de importação 1024 para não reduzir a altura 536.
-PPU 200 mantém a dimensão nominal das cartas anteriores 180×268 com PPU 100.
-GUIDs, spriteIDs e fileIDs preservados. Catálogo, caminhos Resources, valores,
-sorteios, verso e animações permanecem iguais ao estado anterior à integração.
-
-Aplicação reproduzível: `node Tools/Art/apply_card_collection_v12.cjs`.
-Conferência: `node Tools/Art/apply_card_collection_v12.cjs --check`.
-Backup das 25 imagens/metadados anteriores e manifesto da integração em
-`SourceArt/CardCollection_v12_Integration`. Fontes de expressões e prévia em
-`SourceArt/CardCollection_v12_Expressions` e `Docs/ArtPreviews/CardCollection_v12`.
-
-Conferência de 25 imagens/hashes, recortes, referências e valores passou.
-Build Windows na Unity6000.6.4f1 e teste de inicialização headless concluídos
-em21/10/2026. Pacote `Builds/Pacotes/CrocodiloInvaders-DEV-Windows.zip`.
-Conferência visual interativa pelo modo DEV ainda pendente.
-
-## Histórico: cartas Croc v03 — 20/10/2026
-
-O usuário rejeitou a v01 (ícones genéricos e moldura uniforme) e a v02 (molduras
-planas e composição com sprites pequenos). A v03 usa novas cenas de combate em
-close-up, com a identidade do retrato do Croc como referência, e molduras de metal
-sombreadas, com espessura, rebites, desgaste e luzes embutidas. As famílias são
-Ataque, Rajada, Blindagem, Propulsão e Especial. Frases pequenas foram removidas.
-O verso mostra Croc com asas militares. Valores, sorteio, efeitos e animações iguais.
-
-Molduras: aço/oliva comum; chassi azul com cantoneiras prateadas e luz ciano raro;
-armadura violeta com conduítes épica; bronze/ouro com ombros alados e estrela
-lendário; carcaça carmesim com presas marfim mítico. A mesma ilustração aparece
-na prancha das cinco raridades para comparar material, estrutura, cor e acabamento.
-
-Cartas de 180×268, composição por atlas com filtro Point e letras bitmap;
-sem mipmaps. GUIDs e fileIDs preservados; importação cobre a tela inteira.
-Manifest e fontes documentados em `SourceArt/CardsCroc_v03`, exportador em
-`Tools/Art/build_croc_cards_v03.cjs`, prévias em `Docs/ArtPreviews/CardsCroc_v03`.
-V01/v02 e originais anteriores preservados nas respectivas pastas de SourceArt.
-Conferência visual e validação de catálogo concluídas; sem Play Mode nesta revisão.
+Teste no menu inicial → DEV ou F8 → Iniciar teste de cartas. O modo ciclo25
+exibe a coleção inteira usando a recompensa normal, com rerolls infinitos no DEV.
+Detalhes de integração: [CartasIntegracao_v21.md](CartasIntegracao_v21.md).
+Histórico completo de arte e documentação anterior preservado no backup.
 
 ## Valores das cartas
 
@@ -160,34 +117,20 @@ A pausa bloqueia escolhas e rerolls sob sua interface. Continuar volta à escolh
 mantendo o combate congelado. Sair para o menu e morrer cancelam a recompensa e
 restauram o relógio da cena; não liberam uma onda após a morte.
 
-### Efeitos das raridades superiores
+### Efeitos e áudio atuais — v25
 
-- Épica: halo e raios de luz roxos, pixels flutuantes e um toque musical curto.
-- Lendária: halo dourado mais intenso, mais pixels e um acorde com mais notas.
-- Mítica: trovão vermelho nas duas laterais durante a revelação, halo vermelho
-  pulsando depois, mais partículas e um som de revelação com impacto grave e textura elétrica.
+Os efeitos externos crescem da comum discreta à mítica com arcos curtos junto
+da moldura. A malha protege os textos e comparações; o raio vertical antigo
+não é mais esticado. As 25 artes e o catálogo preservam a identidade dos sprites.
 
-Os efeitos começam quando a carta vira para a frente, ficam atrás da sua arte e
-acompanham seu movimento e transparência. Nenhum Graphic dos efeitos recebe cliques.
-O trovão usa os 48 frames de `thunder red/spritesheet-red.png`, fornecido pelo usuário,
-copiado sem alterar o PNG. Toca uma vez a 40 fps (1,2 s) e termina; o halo e as
-partículas continuam até escolher ou fazer reroll. O arquivo é importado com filtro
-Point, sem mipmaps ou compressão. Comuns e raras não recebem esses halos.
+As cartas usam nove sons originais sintetizados para o jogo, sem samples de
+terceiros. Lendárias/míticas têm só brilhos curtos e irregulares, sem música,
+acordes ou melodia de fundo. Um brilho compartilhado por oferta e ganho 1/N nas
+revelações altas evitam multiplicar o volume ao cair duas ou três míticas.
+Pausa congela os sons; reroll, escolha e menu encerram a cintilação.
 
-O Canvas existente está em Screen Space Overlay. As luzes são desenhadas na UI por
-um shader aditivo com coordenadas quantizadas, mantendo o aspecto pixelado e evitando
-adicionar câmeras ou iluminação de mundo. Uma camada única de mesh por carta desenha
-os pixels flutuantes, sem instanciar um objeto por partícula. O relógio dos efeitos
-usa tempo não escalado para funcionar com o combate congelado, mas para explicitamente
-quando a pausa é aberta. O som também respeita `AudioListener.pause`.
-
-`CardRarityFeedback` coordena halo, trovão e sua duração; `CardRarityParticles` desenha
-as partículas; `CardRarityAudio` toca um dos três sons originais curtos em
-`Assets/Audio/CardRewards`. Os sons foram sintetizados para este projeto, não extraídos
-de outro jogo. O volume padrão é 0,42 na fonte de cada carta, ajustável no prefab.
-A revelação substitui o clique genérico nessas três raridades, para preservar o som
-distinto sem somá-lo ao som anterior. Reroll, saída e desativação limpam os efeitos e
-interrompem o áudio anterior. Chamadas repetidas de face-up não reiniciam trovão nem som.
+Receita: `Tools/Audio/prepare_card_audio_v25.py`; manifesto completo em
+`SourceArt/CardAudio_v25_Sparkle`. Detalhes: [AudioCartasBrilho_v25.md](AudioCartasBrilho_v25.md).
 
 ## Pesquisa e escolhas de animação
 
@@ -246,9 +189,9 @@ de build também as executa. Play Mode real percorreu nove recompensas com rerol
 pausa, aplicação única de carta, boss, pontuação e derrota, usando abates e tempo
 acelerados para exercitar o fluxo. Isso não avalia o balanceamento de uma partida manual.
 
-Os efeitos têm validação adicional: três auras e sons distintos, reprodução única
-do trovão, 48 frames importados, shaders compilados e geometria das partículas
-presente no CanvasRenderer. Verifica pausa do relógio e áudio, limpeza ao fazer
-reroll e sair, ausência de brilho em comuns/raras e cliques sem interceptação.
+Os efeitos têm validação adicional em 122 verificações: auras/sons distintos,
+cintilação compartilhada, duas/três míticas com ganho dividido e geometria
+das partículas presente no CanvasRenderer. Verifica pausa do relógio e áudio, limpeza ao fazer
+reroll e sair, ausência de aura contínua em comuns e cliques sem interceptação.
 As capturas com as três raridades superiores são exemplos de conferência visual,
 sem forçar essas cartas no sorteio da partida.
