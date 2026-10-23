@@ -23,11 +23,53 @@ public sealed class MainMenuController : MonoBehaviour
     private AudioOptionsView options;
     private PlayerNameView nameView;
     private LeaderboardView leaderboard;
+    private DeveloperMenuView developerMenu;
+    private string selectedGameplayScene;
+    private GameObject jungleEntry;
 
     private void Awake()
     {
+        DevelopmentCardSession.End();
         LeaderboardSession.SaveCompletedRun();
         LeaderboardSession.Cancel();
+        developerMenu = gameObject.AddComponent<DeveloperMenuView>();
+        developerMenu.Initialize(this, playButton != null ? playButton.GetComponentInChildren<TMPro.TMP_Text>(true)?.font : null);
+        if (SceneUtility.GetBuildIndexByScenePath(JungleStageScene) >= 0)
+        {
+            jungleEntry = DevelopmentUI.Canvas("JungleMissionEntry");
+            jungleEntry.AddComponent<CanvasGroup>();
+            jungleEntry.GetComponent<Canvas>().sortingOrder = 40;
+            var button = DevelopmentUI.Button("JungleMission", jungleEntry.transform,
+                playButton != null ? playButton.GetComponentInChildren<TMPro.TMP_Text>(true)?.font : null,
+                "FASE 2 · SELVA", PlayJungle, 44);
+            DevelopmentUI.Corner(button, Vector2.zero, new Vector2(24, 24), new Vector2(286, 44));
+        }
+    }
+
+    public bool TryOpenDeveloperMenu()
+    {
+        if (leaving || !menuGroup.interactable) return false;
+        menuGroup.interactable = false;
+        return true;
+    }
+
+    public void CloseDeveloperMenu() => RestoreMenu(playButton);
+
+    public bool BeginDevelopmentCards()
+    {
+        if (leaving || loadingPrefab == null || SceneUtility.GetBuildIndexByScenePath(gameplayScene) < 0) return false;
+        DevelopmentCardSession.Begin();
+        LeaderboardSession.Cancel();
+        GameplayLoadingController loading = Instantiate(loadingPrefab);
+        if (!loading.Begin(gameplayScene))
+        {
+            Destroy(loading.gameObject);
+            DevelopmentCardSession.End();
+            return false;
+        }
+        leaving = true;
+        menuGroup.interactable = false;
+        return true;
     }
 
     public void ShowLeaderboard()
@@ -60,15 +102,23 @@ public sealed class MainMenuController : MonoBehaviour
 
     private void Update()
     {
+        if (jungleEntry != null)
+        {
+            var group = jungleEntry.GetComponent<CanvasGroup>();
+            group.alpha = menuGroup.alpha;
+            group.interactable = group.blocksRaycasts = !leaving && menuGroup.interactable;
+        }
         if ((Keyboard.current == null || !Keyboard.current.escapeKey.wasPressedThisFrame)
             && (Gamepad.current == null || !Gamepad.current.buttonEast.wasPressedThisFrame)) return;
-        if (options != null && options.IsVisible) options.Close();
+        if (developerMenu != null && developerMenu.IsVisible) developerMenu.Close();
+        else if (options != null && options.IsVisible) options.Close();
         else if (nameView != null && nameView.IsVisible) nameView.Close();
         else if (leaderboard != null && leaderboard.IsVisible) leaderboard.Close();
     }
 
     private void OnDestroy()
     {
+        if (jungleEntry != null) Destroy(jungleEntry);
         if (options != null) Destroy(options.gameObject);
         if (nameView != null) Destroy(nameView.gameObject);
         if (leaderboard != null) Destroy(leaderboard.gameObject);
@@ -77,8 +127,15 @@ public sealed class MainMenuController : MonoBehaviour
     private void OnApplicationQuit() => LeaderboardSession.SaveCompletedRun();
 
     public void PlayGame()
+        => PlayChapter(gameplayScene);
+
+    public const string JungleStageScene = "Assets/Scenes/StageTwoJungle.unity";
+    public void PlayJungle() => PlayChapter(JungleStageScene);
+
+    private void PlayChapter(string scenePath)
     {
         if (leaving || !menuGroup.interactable || namePrefab == null) return;
+        selectedGameplayScene = scenePath;
         if (nameView == null) nameView = Instantiate(namePrefab);
         menuGroup.interactable = false;
         nameView.Open(BeginNamedGame, () => RestoreMenu(playButton));
@@ -87,7 +144,7 @@ public sealed class MainMenuController : MonoBehaviour
     private void BeginNamedGame(string playerName)
     {
         if (leaving) return;
-        if (SceneUtility.GetBuildIndexByScenePath(gameplayScene) < 0)
+        if (SceneUtility.GetBuildIndexByScenePath(selectedGameplayScene) < 0)
         {
             Debug.LogError("Inclua a cena de gameplay na lista de cenas do build.", this);
             return;
@@ -105,7 +162,7 @@ public sealed class MainMenuController : MonoBehaviour
         leaving = true;
         menuGroup.interactable = false;
         GameplayLoadingController loading = Instantiate(loadingPrefab);
-        if (loading.Begin(gameplayScene)) { nameView.Hide(); return; }
+        if (loading.Begin(selectedGameplayScene)) { nameView.Hide(); return; }
         Destroy(loading.gameObject);
         leaving = false;
         LeaderboardSession.Cancel();
